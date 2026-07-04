@@ -16,7 +16,7 @@ class Todo(BaseModel):
 # POST endpoint: Create a new todo
 @app.post("/todos")
 def create_todo(todo: Todo):
-    
+
     # Add the new todo to the list
     todos.append(todo)
     return {
@@ -41,7 +41,7 @@ def get_todo(todo_id: int):
     return {"Error": "Todo not found"}
 
 # PUT endpoint: Update an existing todo
-@app.put("/tpdps/{todo_id}")   # (Typo: should be "/todos/{todo_id}")
+@app.put("/todos/{todo_id}")  
 def update_todo(todo_id: int, updated_todo: Todo):
 
     # Find the todo by its ID
