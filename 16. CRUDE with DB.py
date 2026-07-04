@@ -4,99 +4,84 @@ from fastapi import FastAPI, Depends, HTTPException
 
 app = FastAPI()
 
-# Database file path — SQLite will create test.db in the current directory
 DATABASE_URL = "sqlite:///./test.db"
 
-# Create the database engine — the core connection to the DB
-# check_same_thread=False allows FastAPI to use it across multiple threads
 engine = create_engine(
     DATABASE_URL,
     connect_args={"check_same_thread": False}
 )
 
-# SessionLocal is a factory — calling SessionLocal() gives you a new DB session
 SessionLocal = sessionmaker(bind=engine)
 
-# Base class — all models (tables) will inherit from this
 Base = declarative_base()
 
-# Todo model — maps to the "todos" table in the database
 class Todo(Base):
     __tablename__ = "todos"
 
-    id = Column(Integer, primary_key=True, index=True)  # auto increment ID
-    title = Column(String)       # todo text
-    completed = Column(String)   # completion status
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String)
+    completed = Column(String)
 
-# Creates all tables in the DB if they don't exist yet
 Base.metadata.create_all(bind=engine)
 
-# Dependency function — opens a DB session, yields it, then closes it after use
 def get_db():
     db = SessionLocal()
     try:
-        yield db      # gives the session to the endpoint
+        yield db
     finally:
-        db.close()    # always closes even if an error occurs
+        db.close()
 
-#Create API
+# Creates a new todo with title and default completed=False
 @app.post("/todos")
-def create_todo(title:str,db: Session = Depends(get_db)):
-    todo = Todo(title=title,completed="False")
-    db.add(todo)
-    db.commit()
-    db.refresh(todo)
+def create_todo(title:str, db: Session = Depends(get_db)):
+    todo = Todo(title=title, completed="False")  # build the todo object
+    db.add(todo)        # stage it
+    db.commit()         # save to DB
+    db.refresh(todo)    # reload from DB to get the auto-generated id
     return{
         "message":"Todo Created",
         "data":todo
     }
 
-#Read All Data
+# Fetches all todos from the DB and returns count + data
 @app.get("/todos")
 def get_todos(db:Session = Depends(get_db)):
-    todos = db.query(Todo).all()
-
+    todos = db.query(Todo).all()  # SELECT * FROM todos
     return{
         "Total":len(todos),
         "data":todos
     }
 
-#Read data based on ID
+# Fetches a single todo by ID, raises 404 if not found
 @app.get("/todos/{todo_id}")
 def get_todo(todo_id:int, db: Session = Depends(get_db)):
-    todo = db.query(Todo).filter(Todo.id == todo_id).first()
-
+    todo = db.query(Todo).filter(Todo.id == todo_id).first()  # SELECT WHERE id=todo_id
     if not todo:
         raise HTTPException(status_code=404, detail="Todo not found")
     return todo
 
-#Update
+# Finds todo by ID, updates its title, saves and returns updated data
 @app.put("/todos/{todo_id}")
 def update_todo(todo_id:int, title:str, db: Session = Depends(get_db)):
     todo = db.query(Todo).filter(Todo.id == todo_id).first()
-
     if not todo:
-            raise HTTPException(status_code=404, detail="Todo not found")
-        
-    todo.title = title
-    db.commit()
-    db.refresh(todo)
+        raise HTTPException(status_code=404, detail="Todo not found")
+    todo.title = title  # update the field directly on the object
+    db.commit()         # save changes
+    db.refresh(todo)    # reload updated data from DB
     return{
         "message":"Todo Updated",
         "data": todo
     }
 
-#DELETE
+# Finds todo by ID, deletes it from DB
 @app.delete("/todos/{todos_id}")
 def delete_todo(todo_id:int, db: Session = Depends(get_db)):
     todo = db.query(Todo).filter(Todo.id == todo_id).first()
-
     if not todo:
         raise HTTPException(status_code=404, detail="Todo not found")
-    
-    db.delete(todo)
-    db.commit()
-
+    db.delete(todo)  # mark for deletion
+    db.commit()      # execute deletion
     return {
         "message":"TODO Deleted"
     }
