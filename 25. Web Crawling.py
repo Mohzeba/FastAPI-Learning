@@ -30,7 +30,7 @@ def crawl_website():
     title= []
     # list to collect scraped items (named 'title' but really holds headline texts)
 
-    for item in soup.find.all("a",class_="topbloackNews__sidebarLink"):
+    for item in soup.find_all("a",class_="topBlockNews__sidebarLink"):
         # find_all() = find every tag matching these conditions (here: every <a> tag
         # with this specific CSS class) — returns a list of matches, not just one
         title.append(item.get_text())
